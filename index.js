@@ -123,26 +123,21 @@ async function run() {
       const cursor = productCollection.find(
         req.query.search ? query : queryAll
       );
+
+      const search = await productCollection.find(query).toArray();
       const products = await cursor
         .skip(page * 5)
         .limit(5)
         .toArray();
-      res.send(products);
-    });
 
-    // app.get("/products", async (req, res) => {
-    //   const page = +req.query.page;
-    //   const size = +req.query.size;
-    //   console.log(page, size);
-    //   const query = {};
-    //   const cursor = productCollection.find(query);
-    //   const products = await cursor
-    //     .skip(page * size)
-    //     .limit(size)
-    //     .toArray();
-    //   const count = await productCollection.estimatedDocumentCount();
-    //   res.send({ products, count });
-    // });
+      let count = 0;
+      if (req.query.search !== "") {
+        count = search.length;
+      } else {
+        count = await productCollection.estimatedDocumentCount();
+      }
+      res.send({ products, count });
+    });
   } finally {
   }
 }
