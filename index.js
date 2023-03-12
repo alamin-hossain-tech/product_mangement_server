@@ -39,6 +39,14 @@ const jsonwebtoken = (req, res, next) => {
   }
 };
 
+// verify user validation
+
+app.get("/jwt", jsonwebtoken, (req, res) => {
+  res.json({
+    Message: "Valid User",
+  });
+});
+
 // Try function
 
 async function run() {
@@ -87,20 +95,30 @@ async function run() {
           res.status(200).json({
             accesToken: token,
             message: "login success",
+            userId: user[0]._id,
+            name: user[0].name,
           });
         } else {
-          res.status(401).json({
+          res.json({
             error: "Authenticatin Failed",
           });
         }
       } else {
-        res.status(401).json({
+        res.json({
           error: "Authenticatin Failed",
         });
       }
     });
 
-    // get products
+    // add product
+    app.post("/add-product", async (req, res) => {
+      const product = req.body;
+
+      const result = await productCollection.insertOne(product);
+      res.send(result);
+    });
+
+    // get products all products or search products
     app.get("/products", async (req, res) => {
       const page = +req.query.page;
       const query = {
@@ -128,6 +146,7 @@ async function run() {
       const products = await cursor
         .skip(page * 5)
         .limit(5)
+        .sort({ _id: -1 })
         .toArray();
 
       let count = 0;
@@ -137,6 +156,52 @@ async function run() {
         count = await productCollection.estimatedDocumentCount();
       }
       res.send({ products, count });
+    });
+
+    // get products by id
+
+    app.get("/product/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = {
+        _id: new ObjectId(id),
+      };
+
+      const cursor = await productCollection.findOne(query);
+
+      res.send(cursor);
+    });
+
+    // edit product by id
+    app.put("/edit/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const product = req.body;
+      const option = { upsert: true };
+      const updatedProduct = {
+        $set: {
+          name: product.name,
+          category: product.category,
+          seller: product.seller,
+          price: product.price,
+          ratings: product.ratings,
+          stock: product.stock,
+          img: product.img,
+        },
+      };
+      const result = await productCollection.updateOne(
+        filter,
+        updatedProduct,
+        option
+      );
+      res.send(result);
+    });
+
+    // delete product by id
+    app.post("/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await productCollection.deleteOne(query);
+      res.send(result);
     });
   } finally {
   }
